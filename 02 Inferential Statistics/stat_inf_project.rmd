@@ -1,0 +1,100 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+```
+
+### Load data
+
+```{r load-data}
+load("gss.Rdata")
+```
+
+* * *
+
+## Part 1: Data
+
+This project uses an extract of the General Social Survey (GSS) Cumulative File 1972-2012 that was provided by Coursera.
+
+Since 1972, the General Social Survey (GSS) has been monitoring societal change and studying the growing complexity of American society. The GSS aims to gather data on contemporary American society in order to monitor and explain trends and constants in attitudes, behaviors, and attributes; to examine the structure and functioning of society in general as well as the role played by relevant subgroups; to compare the United States to other societies in order to place American society in comparative perspective and develop cross-national models of human society; and to make high-quality data easily accessible to scholars, students, policy makers, and others, with minimal cost and waiting.
+
+As per documentation, GSS collects data through probability sampling since 1977. As we know random selection is part of sampling process and data has been collected from English speaking US population, the data can be generalized for US population.
+
+Since, this is an observational study, we cannot determine the causality of the study.
+
+* * *
+
+## Part 2: Research question
+
+Is there any association between economic class and race of general US citizen?
+
+Reason for interest: If there is indeed an association between above two variables, It provides more evidence for policy makers to act in improving the situation. 
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+```{r}
+df <- gss  %>% select(class, race) %>% filter(!is.na(class), !is.na(race), class != "No Class")
+df %>% group_by(race, class) %>% summarise(n = n()) %>% mutate(proportion = n / sum(n))
+```
+
+```{r}
+ggplot(df, aes(x = race)) + geom_bar(aes(fill = class), position = 'fill') + labs(x = "race", y = "proportion")
+```
+
+We can observer that there is difference in proportion of people belonging to Lower, middle and upper class between all races. To test if it is statistically significant we need to perform chi-square test of independence.
+
+* * *
+
+## Part 4: Inference
+
+### Hypothesis
+
+* H0: Race and Class of general US citizens are independent.  
+* H1: Race and Class of general US citizens are dependent.
+
+### Condition for chi-square test
+
+__1. Independence__  
+
+* Sampling in GSS is random  
+* Total observations are less than 60,000 which is much below 10% of entire US population  
+* While each individual can only have unique Class, In todays, context we can't guarantee that sampled individual is not multi-racial. For simplicity and as per recorded data we would assume every individual only belong to single recorded race.
+    
+__2. Sample size__ 
+
+* we have more than 5 expected cases for every case.
+    
+```{r}
+df_chitest <- table(df$class, df$race) [1:4,]
+df_chitest
+```
+
+### Method to use
+
+To determine association between two categorical variable with more than 2 levels we will use chi-square test of Independence.
+
+```{r}
+chitest <- chisq.test(df_chitest)
+chitest
+round(chitest$expected, 3)
+```
+
+### Results
+
+Looking at a big X-squared value and very low p-value (very small compared to 5% significance level), we reject the null hypothesis and conclude that race and class are indeed associated. The confidence interval is not calculated because chi-square distribution is always right skewed.

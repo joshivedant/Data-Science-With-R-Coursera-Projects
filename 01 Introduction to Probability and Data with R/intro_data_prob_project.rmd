@@ -1,0 +1,109 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `brfss2013`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("brfss2013.RData")
+#get from https://github.com/diogoaurelio/BRFSS_explore/blob/master/data/brfss2013.RData
+```
+
+* * *
+
+## Part 1: Data
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is a collaborative project between all of the states in the United States (US) and participating US territories and the Centers for Disease Control and Prevention (CDC).
+
+Stratified Sampling is used for collecting data in given study if we consider each state as strata, Since they mention that "The BRFSS objective is to collect uniform, state-specific data". Since 2011, BRFSS conducts both landline telephone- and cellular telephone-based surveys and as mentioned in document both are randomly sampled.
+
+But it is important to note that this survey has no random assignment and Since it is observational study we can genrealise correlation in US Population.
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:** In general US population, is having a good income correlates with having life satisfaction, further is it also dependent on gender. In general we can assume that families with higher income are likely to have greater life satisfaction but some poor countries have also topped the life satisfaction index.
+
+**Research quesion 2:** In general US population, does general health condition correlates with amount of sleep and is it affected by performing regular exercise. It is well known that certain amount of sleep is required for healthy lifestyle but I am also interested in fact that doing regular exercise matters or not.
+
+**Research quesion 3:** In general US population, is there any correlation between average alcoholic drinking per day and Employment Status. I am just curious about the demographic drinking habits.
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+
+```{r}
+q1 <- select(brfss2013, income2, lsatisfy, sex) %>% 
+  filter(!is.na(income2), !is.na(lsatisfy), !is.na(sex))
+q1 <- q1 %>% group_by(income2, lsatisfy, sex) %>% summarise(n = n())
+q1
+```
+
+```{r}
+ggplot(q1, aes(x = income2, y = n, fill = lsatisfy)) + geom_bar(stat="identity", position = "fill") + labs(x = "Income level", y = "Fraction", fill = "Life Satisfacttion") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) + facet_grid(. ~  sex)
+```
+
+As we can observe, general US population is quite satisfied with their lives but upon closer inspection, we can see that as income increasing chances that the person is satisfied with their lives increases and it is independent of gender since both facets are almost identical.
+
+**Research quesion 2:**
+
+```{r}
+q2 <- select(brfss2013, genhlth, exerany2, sleptim1) %>%
+  filter(!is.na(genhlth), !is.na(exerany2), !is.na(sleptim1))
+ggplot(q2, aes(x = exerany2, y = sleptim1)) + geom_boxplot() + labs(x = "Do exercise or not", y = "Hours of Sleep")
+```
+
+as common sense dictates and so does the boxplot, sleep beyond 11 hours seems far fetched and are very unique cases to be included for general study.
+
+```{r}
+q2 <- select(brfss2013, genhlth, exerany2, sleptim1) %>%
+  filter(!is.na(genhlth), !is.na(exerany2), !is.na(sleptim1), sleptim1 < 11)
+ggplot(q2, aes(x = genhlth, y = sleptim1)) + geom_boxplot() + facet_grid(. ~  exerany2) + labs(x = "General Health Condition", y = "Hours of Sleep")
+```
+
+boxplot was not much helpful since sleep data available is discrete and not continuous.
+
+```{r}
+q2 <- q2 %>% group_by(genhlth, exerany2) %>% summarise(mean_slp = mean(sleptim1))
+ggplot(q2, aes(x = genhlth, y = mean_slp)) + geom_point() + facet_grid(. ~  exerany2) + labs(x = "General Health Condition", y = "Hours of Sleep")
+```
+
+when looking at average amount sleep and corresponding health condition it does appear that people with good health tend to sleep more. Whereas doing daily exercise seem to slightly increase the amount of sleep a person takes.
+
+**Research quesion 3:**
+
+```{r}
+q3 <- select(brfss2013, employ1, avedrnk2) %>% 
+  filter(!is.na(employ1), !is.na(avedrnk2))
+q3 <- q3 %>% group_by(employ1) %>% summarise(mean_drink = mean(avedrnk2))
+q3
+```
+
+```{r}
+library(scales)
+ggplot(q3, aes(x = employ1, y = mean_drink)) + geom_bar(stat="identity") + labs(x = "Employment Status", y = "Average drinks per day") + scale_x_discrete(labels = wrap_format(10))
+```
+
+we can see that homemaker and retired person drink less and people who are out of work or students drink more than what may be usual level of consumption of drinks in US population. Since average consumption is not same for all there does seem to be correlation between employment status and level of consumption of drinks.
