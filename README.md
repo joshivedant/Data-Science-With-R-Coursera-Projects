@@ -1,1 +1,1 @@
-# Statistics-With-R-Coursera-Projects
+# Data-Science-With-R-Coursera-Projects
